@@ -37,10 +37,7 @@ enum IniSection
     Module,
 }
 
-/**
- * @deprecated use NativeModule.load
- */
-export function eminus_load_dlls_in_mods():void {
+function eminus_load_dlls_in_mods():void {
 
     const modules:string[] = [];
     let verbose = true;
@@ -149,3 +146,5 @@ export function eminus_load_dlls_in_mods():void {
         }
     }
 }
+
+eminus_load_dlls_in_mods();
