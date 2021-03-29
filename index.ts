@@ -1,33 +1,37 @@
 
-import { AllocatedPointer } from 'bdsx/core';
+import { Encoding } from 'bdsx/common';
+import { AllocatedPointer, VoidPointer } from 'bdsx/core';
 import { dll, NativeModule } from 'bdsx/dll';
 import { isDirectory } from 'bdsx/util';
 import { ERROR_MOD_NOT_FOUND, FORMAT_MESSAGE_ALLOCATE_BUFFER, FORMAT_MESSAGE_FROM_SYSTEM, LANG_NEUTRAL, MAKELANGID, SUBLANG_DEFAULT } from 'bdsx/windows_h';
 import { dllchecker } from './dllchecker';
 import fs = require('fs');
+import path = require('path');
 import colors = require('colors');
-import { Encoding } from 'bdsx/common';
+import { RawTypeId } from 'bdsx';
 
-function getErrorMessage(errcode:number):string {
+const FormatMessageW = dll.kernel32.module.getFunction('FormatMessageW', RawTypeId.Int32, null, RawTypeId.Int32, VoidPointer, RawTypeId.Int32, RawTypeId.Int32, VoidPointer, RawTypeId.Int32, VoidPointer);
+
+function getErrorMessage(errcode:number, args:VoidPointer):string {
     const bufferptr = new AllocatedPointer(8);
-    const charlen = dll.kernel32.FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, null,
-        errcode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), bufferptr, 0, null);
-    
+    const charlen = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, null,
+        errcode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), bufferptr, 0, args);
+    if (charlen === 0) return '?';
     const strptr = bufferptr.getPointer();
     const message = strptr.getString(charlen, 0, Encoding.Utf16);
     dll.kernel32.LocalFree(strptr);
     return message.trim();
 }
-function printErrorCode(err:number):void {
+function printErrorCode(err:number, args:VoidPointer):void {
     console.error(colors.red(`Error Code: ${err}`));
-    console.error(colors.red('Error Message: '+getErrorMessage(err)));
+    console.error(colors.red('Error Message: '+getErrorMessage(err, args)));
 }
 
 function loadEminus():string|null {
     try {
         return fs.readFileSync('mods/eminus.ini', 'utf-8');
     } catch (err) {
-        return null;   
+        return null;
     }
 }
 
@@ -122,6 +126,7 @@ function eminus_load_dlls_in_mods():void {
     dll.kernel32.SetDllDirectoryW('mods');
 
     for (const name of modules) {
+        if (path.extname(name).toLocaleLowerCase() !== '.dll') continue;
         try {
             NativeModule.get(name);
             if (verbose) console.log(`[EMinus] mods\\${name} (Already loaded)`);
@@ -135,7 +140,13 @@ function eminus_load_dlls_in_mods():void {
         } catch (err) {
             console.error(`[EMinus] mods\\${name}: ${colors.red('Failed')}`);
             if (err.errno) {
-                printErrorCode(err.errno);
+                const bytelen = name.length*2;
+                const ptr = new AllocatedPointer(0x10 + bytelen+2);
+                ptr.setString(name, 0x10, Encoding.Utf16);
+                ptr.setInt16(0, bytelen+0x10);
+                ptr.setPointer(ptr.add(0x10), 0x8);
+                ptr.setPointer(ptr.add(0x8), 0x0);
+                printErrorCode(err.errno, ptr);
                 if (err.errno === ERROR_MOD_NOT_FOUND) {
                     dllchecker.check(name);
                 }
