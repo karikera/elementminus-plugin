@@ -2,15 +2,15 @@
 import { Encoding } from 'bdsx/common';
 import { AllocatedPointer, VoidPointer } from 'bdsx/core';
 import { dll, NativeModule } from 'bdsx/dll';
-import { isDirectory } from 'bdsx/util';
+import { fsutil } from 'bdsx/fsutil';
+import { int32_t } from 'bdsx/nativetype';
 import { ERROR_MOD_NOT_FOUND, FORMAT_MESSAGE_ALLOCATE_BUFFER, FORMAT_MESSAGE_FROM_SYSTEM, LANG_NEUTRAL, MAKELANGID, SUBLANG_DEFAULT } from 'bdsx/windows_h';
 import { dllchecker } from './dllchecker';
 import fs = require('fs');
 import path = require('path');
 import colors = require('colors');
-import { RawTypeId } from 'bdsx';
 
-const FormatMessageW = dll.kernel32.module.getFunction('FormatMessageW', RawTypeId.Int32, null, RawTypeId.Int32, VoidPointer, RawTypeId.Int32, RawTypeId.Int32, VoidPointer, RawTypeId.Int32, VoidPointer);
+const FormatMessageW = dll.kernel32.module.getFunction('FormatMessageW', int32_t, null, int32_t, VoidPointer, int32_t, int32_t, VoidPointer, int32_t, VoidPointer);
 
 function getErrorMessage(errcode:number, args:VoidPointer):string {
     const bufferptr = new AllocatedPointer(8);
@@ -115,7 +115,7 @@ function eminus_load_dlls_in_mods():void {
             }
         }
     } else {
-        if (!isDirectory('mods')) {
+        if (!fsutil.isDirectorySync('mods')) {
             console.error('[EMinus] no mods directory, skip');
             return;
         }

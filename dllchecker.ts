@@ -70,7 +70,7 @@ class DllWalker {
     
                 if (nt.OptionalHeader.NumberOfRvaAndSizes < 2) break;
     
-                const importdesc_vaddr = nt.OptionalHeader.DataDirectory[1].VirtualAddress;
+                const importdesc_vaddr = nt.OptionalHeader.DataDirectory.get(1).VirtualAddress;
                 if (importdesc_vaddr === 0) break;
 
                 let obj:DepsResultTree|null = null;
