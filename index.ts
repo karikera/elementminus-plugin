@@ -120,7 +120,7 @@ function eminus_load_dlls_in_mods():void {
             return;
         }
         console.error('[EMinus] no mods\\eminus.ini, It will load mods\\*.dll');
-        modules.push(... fs.readdirSync('./mods'));
+        modules.push(... fs.readdirSync('./mods').filter(x => x.endsWith(".dll")));
     }
     if (verbose) console.log('[EMinus] JS-Version');
     dll.kernel32.SetDllDirectoryW('mods');
